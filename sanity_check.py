@@ -1,55 +1,63 @@
+from models import Actor, Critic
 import torch
 from env import CartPoleEnv
-from rollout import RolloutBuffer
+from rollout import RolloutBuffer, collect_rollout
 
-def collect_rollout(env, buffer, steps=200):
-    """
-    Simulates the loop of collecting data.
-    """
-    state = env.reset()
+def test_sanity_check():
+    print("--- Starting Sanity Check ---")
 
-    for _ in range(steps):
-        # Random action: 0 (left) or 1 (right)
-        action = env.env.action_space.sample()
+    # 1. Setup Phase
+    device = torch.device("cpu")
+    env = CartPoleEnv(device=device)
 
-        # Fake LogProb (e.g., 50% chance = log(0.5) = -0.69)
-        log_prob = -0.693
+    # Initialize separate networks
+    actor = Actor(env.observation_space, env.action_space).to(device)
+    critic = Critic(env.observation_space).to(device)
 
-        # Fake Value Estimate (Critic guesses the score is 10.0)
-        value_estimate = 10.0
+    buffer = RolloutBuffer()
 
-        # 2. Step the Environment
-        next_state, reward, done, info = env.step(action)
+    # 2. Execution Phase (Simulate one PPO iteration)
+    steps_to_collect = 128
+    batch_size = 32
 
-        # 3. Store Data
-        buffer.add(state, action, reward, done, log_prob, value_estimate)
+    print(f"1. Collecting {steps_to_collect} steps of data...")
+    collect_rollout(env, actor, critic, buffer, steps_to_collect)
 
-        state = next_state
+    # Check if buffer is full
+    current_len = len(buffer.states)
+    if current_len != steps_to_collect:
+        print(f"Buffer filled correctly: {current_len}/{steps_to_collect}")
+    else:
+        print(f"Buffer size mismatch: {current_len}")
 
-        if done:
-            state = env.reset()
+    # 3. Data Processing Phase (GAE)
+    print("2. Verifying GAE Computation...")
+    if buffer.advantages is not None and buffer.returns is not None:
+        print("GAE computed successfully (Fields are not None).")
+    else:
+        print("GAE failed to compute inside collect_rollout.")
 
-    print("Rollout complete!")
+    # 4. Batch Generation Phase
+    print(f"3. Testing Batch Generation (Batch size: {batch_size})...")
 
+    # Get the first batch
+    data_loader = buffer.get_batches(batch_size)
+    states, actions, logprobs, returns, advs = next(data_loader)
+
+    # Define expected shapes
+    # States: [32, 4], Actions: [32], Returns: [32]
+    print(f"   Shape Check -> States: {states.shape}, Returns: {returns.shape}")
+
+    expected_state_shape = (batch_size, 4)
+    expected_1d_shape = (batch_size,)
+
+    if (states.shape == expected_state_shape and
+            returns.shape == expected_1d_shape and
+            advs.shape == expected_1d_shape):
+        print("Correct Tensor shapes.")
+    else:
+        print("Tensor shapes are wrong.")
 
 if __name__ == "__main__":
-    # Initialize
-    my_env = CartPoleEnv(render_mode="human")
-    my_buffer = RolloutBuffer()
+    test_sanity_check()
 
-    # Run loop
-    collect_rollout(my_env, my_buffer, steps=50)
-
-    # Check shapes
-    states, actions, logprobs, rewards, dones, values = my_buffer.get()
-
-    print("\n--- Tensor Shape Check ---")
-    print(f"States:   {states.shape}  (Expected: [50, 4])")
-    print(f"Actions:  {actions.shape}  (Expected: [50])")
-    print(f"Rewards:  {rewards.shape}  (Expected: [50])")
-    print(f"Values:   {values.shape}   (Expected: [50])")
-
-    if states.shape[1] == 4 and rewards.shape[0] == 50:
-        print("\n SUCCESS: Infrastructure is ready.")
-    else:
-        print("\n ERROR: Shapes are incorrect.")
