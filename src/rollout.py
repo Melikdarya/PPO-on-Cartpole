@@ -88,7 +88,7 @@ class RolloutBuffer:
 
         # Backward computation
         for t in reversed(range(len(rewards))):
-            mask = 1.0 - dones[t] # mask dones to not take into account future value estimates from new sessions
+            mask = 1.0 - dones[t]  # mask dones to not take into account future value estimates from new sessions
 
             delta = rewards[t] + gamma * values[t + 1] * mask - values[t]
             gae = delta + gamma * gae_lambda * mask * gae
@@ -153,7 +153,7 @@ def collect_rollout(env, actor, critic, buffer, steps_per_rollout):
             t_state = state.unsqueeze(0)
 
             # Actor: Decides Action
-            dist = Categorical(actor(t_state))
+            dist = Categorical(logits=actor(t_state))
             action = dist.sample()
             log_prob = dist.log_prob(action)
 
