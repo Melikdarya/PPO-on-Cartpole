@@ -27,9 +27,9 @@ class CartPoleEnv:
 
         next_state, reward, terminated, truncated, info = self.env.step(action)
 
-        done = terminated or truncated
+        episode_over = terminated or truncated
 
-        return self._to_tensor(next_state), reward, done, info
+        return self._to_tensor(next_state), reward, episode_over, info
 
     def _to_tensor(self, state):
         """Helper to convert numpy array to PyTorch tensor"""

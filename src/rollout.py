@@ -1,5 +1,6 @@
 import numpy as np
 import torch
+from torch.distributions import Categorical
 
 """
 Rollout collection for PPO.
@@ -9,6 +10,7 @@ This module is responsible for:
 - Collecting trajectories using the current policy
 - Storing transitions in RolloutBuffer
 """
+
 
 class RolloutBuffer:
     def __init__(self):
@@ -133,6 +135,7 @@ class RolloutBuffer:
                 advantages_tensor[batch_idx]
             )
 
+
 def collect_rollout(env, actor, critic, buffer, steps_per_rollout):
     """
     Collects a batch of data using separate Actor and Critic networks.
@@ -150,7 +153,7 @@ def collect_rollout(env, actor, critic, buffer, steps_per_rollout):
             t_state = state.unsqueeze(0)
 
             # Actor: Decides Action
-            dist = actor(t_state)
+            dist = Categorical(actor(t_state))
             action = dist.sample()
             log_prob = dist.log_prob(action)
 
