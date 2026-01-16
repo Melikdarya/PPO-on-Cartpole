@@ -1,6 +1,5 @@
-import torch
 import torch.nn as nn
-from torch.distributions import Categorical
+
 
 class Critic(nn.Module):
     def __init__(self, state_dim):
@@ -17,6 +16,7 @@ class Critic(nn.Module):
         # Squeeze removes the last dimension: (Batch, 1) -> (Batch)
         return self.net(state).squeeze(-1)
 
+
 class Actor(nn.Module):
     def __init__(self, state_dim, action_dim):
         super().__init__()
@@ -29,5 +29,4 @@ class Actor(nn.Module):
         )
 
     def forward(self, state):
-        logits = self.net(state)
-        return Categorical(logits=logits)
+        return self.net(state)

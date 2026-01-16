@@ -1,5 +1,6 @@
 import numpy as np
 import torch
+from torch.distributions import Categorical
 
 """
 Rollout collection for PPO.
@@ -10,8 +11,9 @@ This module is responsible for:
 - Storing transitions in RolloutBuffer
 """
 
+
 class RolloutBuffer:
-    def __init__(self):
+    def __init__(self, device=torch.device('cpu')):
         self.states = []
         self.actions = []
         self.logprobs = []
@@ -20,6 +22,7 @@ class RolloutBuffer:
         self.values = []
         self.returns = None
         self.advantages = None
+        self.device = device
 
     def clear(self):
         """Clears the buffer after an update step"""
@@ -76,17 +79,17 @@ class RolloutBuffer:
             Value estimate V(s_{T+1}) for the state after the last rollout step.
         """
         # Convert to tensors
-        values = torch.tensor(self.values + [next_value], dtype=torch.float32)
-        rewards = torch.tensor(self.rewards, dtype=torch.float32)
-        dones = torch.tensor(self.dones, dtype=torch.float32)
+        values = torch.tensor(self.values + [next_value], dtype=torch.float32, device=self.device)
+        rewards = torch.tensor(self.rewards, dtype=torch.float32, device=self.device)
+        dones = torch.tensor(self.dones, dtype=torch.float32, device=self.device)
 
-        advantages = torch.zeros(len(rewards), dtype=torch.float32)
+        advantages = torch.zeros(len(rewards), dtype=torch.float32, device=self.device)
 
         gae = 0.0
 
         # Backward computation
         for t in reversed(range(len(rewards))):
-            mask = 1.0 - dones[t] # mask dones to not take into account future value estimates from new sessions
+            mask = 1.0 - dones[t]  # mask dones to not take into account future value estimates from new sessions
 
             delta = rewards[t] + gamma * values[t + 1] * mask - values[t]
             gae = delta + gamma * gae_lambda * mask * gae
@@ -112,8 +115,8 @@ class RolloutBuffer:
         # Gather all data into big tensors
         # We detach() to stop gradients from flowing back into the data collection phase
         states_tensor = torch.stack(self.states).detach()
-        actions_tensor = torch.tensor(self.actions, dtype=torch.long)
-        logprobs_tensor = torch.tensor(self.logprobs, dtype=torch.float32)
+        actions_tensor = torch.tensor(self.actions, dtype=torch.long, device=self.device)
+        logprobs_tensor = torch.tensor(self.logprobs, dtype=torch.float32, device=self.device)
         returns_tensor = self.returns.detach()
         advantages_tensor = self.advantages.detach()
 
@@ -133,6 +136,7 @@ class RolloutBuffer:
                 advantages_tensor[batch_idx]
             )
 
+
 def collect_rollout(env, actor, critic, buffer, steps_per_rollout):
     """
     Collects a batch of data using separate Actor and Critic networks.
@@ -150,7 +154,7 @@ def collect_rollout(env, actor, critic, buffer, steps_per_rollout):
             t_state = state.unsqueeze(0)
 
             # Actor: Decides Action
-            dist = actor(t_state)
+            dist = Categorical(logits=actor(t_state))
             action = dist.sample()
             log_prob = dist.log_prob(action)
 

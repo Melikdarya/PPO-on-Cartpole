@@ -3,6 +3,7 @@ import torch
 from env import CartPoleEnv
 from rollout import RolloutBuffer, collect_rollout
 
+
 def test_sanity_check():
     print("--- Starting Sanity Check ---")
 
@@ -58,6 +59,6 @@ def test_sanity_check():
     else:
         print("Tensor shapes are wrong.")
 
+
 if __name__ == "__main__":
     test_sanity_check()
-

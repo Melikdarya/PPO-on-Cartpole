@@ -1,3 +1,4 @@
 gymnasium
 pygame
 torch
+tqdm # for progress bar
