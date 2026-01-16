@@ -1,4 +1,5 @@
 import torch
+import sys
 from src.env import CartPoleEnv
 from src.ppo import PPOAgent
 
@@ -17,18 +18,19 @@ gae_lambda = 0.95
 entropy_bonus_coef = 0.01
 epsilon = 0.2  # clipping
 
-
-# ----------> train <----------
-
 train_env = CartPoleEnv(device)
-CartPoleAgent = PPOAgent(train_env.observation_space, train_env.action_space, device)
-CartPoleAgent.train(train_env, actor_learning_rate, critic_learning_rate, num_epochs, minibatch_size, steps_per_rollout,
-                    entropy_bonus_coef, discount_factor, gae_lambda, epsilon)
+
+if len(sys.argv) > 1 and sys.argv[1] != "evaluate":
+    # ----------> train <----------
+
+    CartPoleAgent = PPOAgent(train_env.observation_space, train_env.action_space, device)
+    CartPoleAgent.train(train_env, actor_learning_rate, critic_learning_rate, num_epochs, minibatch_size, steps_per_rollout,
+                        entropy_bonus_coef, discount_factor, gae_lambda, epsilon)
 
 
-# ----------> save <----------
+    # ----------> save <----------
 
-CartPoleAgent.save_model_parameters("myCartPoleAgent.pth")
+    CartPoleAgent.save_model_parameters("myCartPoleAgent.pth")
 
 
 # ----------> load <----------
@@ -39,7 +41,7 @@ newAgent.load_model_from_dict("myCartPoleAgent.pth")
 
 # ----------> test <----------
 
-display_episodes = 5
-test_env = CartPoleEnv(device, "human")
-rewards = newAgent.test(test_env, 5)
+test_episodes = 5
+test_env = CartPoleEnv(device) #test_env = CartPoleEnv(device, "human")
+rewards = newAgent.test(test_env, test_episodes)
 print(rewards)

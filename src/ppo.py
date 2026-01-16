@@ -111,7 +111,7 @@ class PPOAgent:
 
             # TODO: Testing loop goes here
 
-    def test(self, test_env: CartPoleEnv, display_episodes: int) -> list:
+    def test(self, test_env: CartPoleEnv, test_episodes: int) -> list:
         """
         TODO: description
         """
@@ -119,7 +119,7 @@ class PPOAgent:
         self.actor.eval()
 
         total_rewards = []
-        for i in range(display_episodes):
+        for i in range(test_episodes):
             state = test_env.reset()
             episode_over = False
             total_reward = 0
