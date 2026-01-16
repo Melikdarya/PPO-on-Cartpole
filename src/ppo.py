@@ -146,6 +146,8 @@ class PPOAgent:
         :param model_name: Model parameters will be saved to the model/model_name path.
         """
         folder_path = Path("models")
+        if not folder_path.exists():
+            folder_path.mkdir()
         model_name = Path(model_name)
 
         model_save_path = folder_path / model_name
