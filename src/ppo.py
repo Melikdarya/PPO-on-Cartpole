@@ -1,7 +1,9 @@
-from tqdm import tqdm
 import torch
 import torch.nn as nn
 from torch.distributions import Categorical
+from tqdm import tqdm
+from pathlib import Path
+
 from src.env import CartPoleEnv
 from src.models import Actor, Critic
 from src.rollout import RolloutBuffer, collect_rollout
@@ -52,7 +54,7 @@ class PPOAgent:
 
     def _calc_surrogate_loss(self, action_logits_new: torch.Tensor,
                              action_logits_old: torch.Tensor,
-                             advantages: torch.Tensor):
+                             advantages: torch.Tensor) -> torch.Tensor:
         """
         TODO: description
         """
@@ -64,7 +66,7 @@ class PPOAgent:
         )
         return -torch.mean(loss)  # empirical average, negative for gradient ascent
 
-    def _evaluate_actions(self, states: torch.Tensor, actions: torch.Tensor):
+    def _evaluate_actions(self, states: torch.Tensor, actions: torch.Tensor) -> (torch.Tensor, torch.Tensor):
         """
         TODO: description
         """
@@ -120,7 +122,7 @@ class PPOAgent:
         """
         TODO: description
         """
-        assert test_env.observation_space == self.env.observation_space
+        assert test_env.observation_space == self.env.observation_space  # TODO: should I check it?
         assert test_env.action_space == self.env.action_space
 
         self.actor.eval()
@@ -143,3 +145,32 @@ class PPOAgent:
             total_rewards.append(total_reward)
 
         return total_rewards
+
+    def save_model_parameters(self, model_name: str) -> None:
+        """
+        Save policy network's state dict (learned parameters) under given model_name.
+
+        Note: Function saves only actor's parameters. Critic's wages are not saved as they are not
+        needed for making predictions.
+
+        Warning: If there exists another file at the same path, it will be overwritten.
+
+        :param model_name: Model parameters will be saved to the model/model_name.pth path.
+        """
+        folder_path = Path("models")
+        model_name = Path(model_name)
+
+        model_save_path = folder_path / model_name
+        print(f"Saving model to: {model_save_path}")
+        torch.save(self.actor.state_dict(), model_save_path)
+
+    def load_model_from_dict(self, model_name: str) -> None:
+        """
+        Load's policy network's parameters from a saved model dictionary.
+
+        :param model_name: Policy network's parameters will be loaded from path "models/model_name.pth".
+        """
+        model_load_path = Path("models") / Path(model_name)
+        self.actor.load_state_dict(torch.load(f=model_load_path, weights_only=True))
+        print("All keys matched successfully!")
+
