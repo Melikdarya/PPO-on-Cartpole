@@ -137,7 +137,7 @@ class RolloutBuffer:
             )
 
 
-def collect_rollout(env, actor, critic, buffer, steps_per_rollout):
+def collect_rollout(env, actor, critic, buffer, steps_per_rollout, gamma=0.99, gae_lambda=0.95):
     """
     Collects a batch of data using separate Actor and Critic networks.
     """
@@ -183,4 +183,4 @@ def collect_rollout(env, actor, critic, buffer, steps_per_rollout):
     with torch.no_grad():
         next_value = critic(state.unsqueeze(0))
 
-    buffer.compute_gae(next_value.item())
+    buffer.compute_gae(next_value.item(), gamma, gae_lambda)
