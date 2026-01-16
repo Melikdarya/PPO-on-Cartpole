@@ -48,7 +48,7 @@ class PPOAgent:
         self.critic_loss_fn = nn.MSELoss()
 
         # rollout buffer
-        self.buffer = RolloutBuffer()
+        self.buffer = RolloutBuffer(device=device)
 
     def _calc_surrogate_loss(self, action_logits_new: torch.Tensor,
                              action_logits_old: torch.Tensor,

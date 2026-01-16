@@ -13,7 +13,7 @@ This module is responsible for:
 
 
 class RolloutBuffer:
-    def __init__(self):
+    def __init__(self, device=torch.device('cpu')):
         self.states = []
         self.actions = []
         self.logprobs = []
@@ -22,6 +22,7 @@ class RolloutBuffer:
         self.values = []
         self.returns = None
         self.advantages = None
+        self.device = device
 
     def clear(self):
         """Clears the buffer after an update step"""
@@ -78,11 +79,11 @@ class RolloutBuffer:
             Value estimate V(s_{T+1}) for the state after the last rollout step.
         """
         # Convert to tensors
-        values = torch.tensor(self.values + [next_value], dtype=torch.float32)
-        rewards = torch.tensor(self.rewards, dtype=torch.float32)
-        dones = torch.tensor(self.dones, dtype=torch.float32)
+        values = torch.tensor(self.values + [next_value], dtype=torch.float32, device=self.device)
+        rewards = torch.tensor(self.rewards, dtype=torch.float32, device=self.device)
+        dones = torch.tensor(self.dones, dtype=torch.float32, device=self.device)
 
-        advantages = torch.zeros(len(rewards), dtype=torch.float32)
+        advantages = torch.zeros(len(rewards), dtype=torch.float32, device=self.device)
 
         gae = 0.0
 
@@ -114,8 +115,8 @@ class RolloutBuffer:
         # Gather all data into big tensors
         # We detach() to stop gradients from flowing back into the data collection phase
         states_tensor = torch.stack(self.states).detach()
-        actions_tensor = torch.tensor(self.actions, dtype=torch.long)
-        logprobs_tensor = torch.tensor(self.logprobs, dtype=torch.float32)
+        actions_tensor = torch.tensor(self.actions, dtype=torch.long, device=self.device)
+        logprobs_tensor = torch.tensor(self.logprobs, dtype=torch.float32, device=self.device)
         returns_tensor = self.returns.detach()
         advantages_tensor = self.advantages.detach()
 
