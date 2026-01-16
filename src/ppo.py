@@ -11,64 +11,37 @@ from src.rollout import RolloutBuffer, collect_rollout
 
 class PPOAgent:
     """
-    TODO: description
+    TODO: class description
     """
     def __init__(self,
-                 env: CartPoleEnv,
-                 actor_learning_rate: float,
-                 critic_learning_rate: float,
-                 epochs: int,
-                 batch_size: int,
-                 steps_per_rollout: int,
-                 entropy_bonus_coef: float = 0.01,
-                 gamma: float = 0.99,
-                 gae_lambda: float = 0.95,
-                 epsilon: float = 0.2,
-                 device: torch.device = torch.device('cpu')):
-        # setup
-        self.env = env
+                 env_observaiotn_space_size: int,
+                 env_action_space_size: int,
+                 device: torch.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')):
+
+        self.observation_space_size = env_observaiotn_space_size
+        self.action_space_size = env_action_space_size
+
+        self.actor = Actor(env_observaiotn_space_size, env_action_space_size).to(device)
         self.device = device
-
-        # tunable hyperparameters
-        self.actor_learning_rate = actor_learning_rate
-        self.critic_learning_rate = critic_learning_rate
-        self.batch_size = batch_size
-        self.epochs = epochs
-        self.steps_per_rollout = steps_per_rollout
-        self.entropy_bonus_coef = entropy_bonus_coef
-        self.gamma = gamma
-        self.gae_lambda = gae_lambda
-        self.epsilon = epsilon
-
-        # actor network
-        self.actor = Actor(env.observation_space, env.action_space).to(device)
-        self.actor_optimizer = torch.optim.Adam(self.actor.parameters(), lr=self.actor_learning_rate)
-
-        # critic network
-        self.critic = Critic(env.observation_space).to(device)
-        self.critic_optimizer = torch.optim.Adam(self.critic.parameters(), lr=self.critic_learning_rate)
-        self.critic_loss_fn = nn.MSELoss()
-
-        # rollout buffer
-        self.buffer = RolloutBuffer(device=device)
 
     def _calc_surrogate_loss(self, action_logits_new: torch.Tensor,
                              action_logits_old: torch.Tensor,
-                             advantages: torch.Tensor) -> torch.Tensor:
+                             advantages: torch.Tensor,
+                             epsilon: float) -> torch.Tensor:
         """
-        TODO: description
+        Calculate surrogate loss using objective: E[min(r(θ)*A, clip(r(θ)*A, 1-ϵ, 1+ϵ))].
         """
         advantages = advantages.detach()  # treat as constants, do not compute gradients
         prob_ration = (action_logits_new - action_logits_old).exp()
         loss = torch.min(
             prob_ration * advantages,
-            torch.clip(prob_ration, 1.0 - self.epsilon, 1.0 + self.epsilon)  # torch.clip() is alias for torch.clamp()
+            torch.clip(prob_ration, 1.0 - epsilon, 1.0 + epsilon)  # torch.clip() is alias for torch.clamp()
         )
         return -torch.mean(loss)  # empirical average, negative for gradient ascent
 
     def _evaluate_actions(self, states: torch.Tensor, actions: torch.Tensor) -> (torch.Tensor, torch.Tensor):
         """
-        TODO: description
+        Calculate new logprobs for collected states and taken actions, and policy entropy.
         """
         logits = self.actor(states)
         dist = Categorical(logits=logits)
@@ -76,45 +49,65 @@ class PPOAgent:
         entropy = dist.entropy()            # how "deterministic" the model was at each step
         return logprobs, entropy
 
-    def train(self) -> None:
+    def train(self,
+              env: CartPoleEnv,
+              actor_learning_rate: float,
+              critic_learning_rate: float,
+              epochs: int,
+              batch_size: int,
+              steps_per_rollout: int,
+              entropy_bonus_coef: float = 0.01,
+              gamma: float = 0.99,
+              gae_lambda: float = 0.95,
+              epsilon: float = 0.2) -> None:
         """
-        TODO: description
+        Proximal Policy Optimization algorithm with the following components:
+        - actor-critic approach
+        - Generalized Advantage Estimation (GAE)
+        - clipped surrogate loss with clipping parameter ϵ
+        - Mini-batch updates
+        - entropy bonus
         """
 
-        for epoch in tqdm(range(self.epochs), desc="Training Progress", unit="epoch"):
+        buffer = RolloutBuffer(device=self.device)
 
-            # start training loop
+        actor_optimizer = torch.optim.Adam(self.actor.parameters(), lr=actor_learning_rate)
+        critic = Critic(self.observation_space_size).to(self.device)
+        critic_optimizer = torch.optim.Adam(critic.parameters(), lr=critic_learning_rate)
+        critic_loss_fn = nn.MSELoss()
+
+        for epoch in tqdm(range(epochs), desc="Training Progress", unit="epoch"):
+
             # collect rollout data
-            collect_rollout(self.env, self.actor, self.critic, self.buffer, self.steps_per_rollout)
+            collect_rollout(env, self.actor, critic, buffer, steps_per_rollout, gamma, gae_lambda)
 
             self.actor.train()
-            self.critic.train()
+            critic.train()
 
             # minibatch update
-            for states, actions, logprobs, returns, advantages in self.buffer.get_batches(self.batch_size):
-                # calculate new logprobs (in first iteration should be the same)
-                # forward pass
+            for states, actions, logprobs, returns, advantages in buffer.get_batches(batch_size):
+                # forward pass, calculate new logprobs
                 new_logprobs, entropy = self._evaluate_actions(states, actions)
-                values = self.critic(states)
+                values = critic(states)
 
                 # calculate loss
-                actor_loss = self._calc_surrogate_loss(new_logprobs, logprobs, advantages)
-                entropy_bonus = self.entropy_bonus_coef * entropy.mean()
+                actor_loss = self._calc_surrogate_loss(new_logprobs, logprobs, advantages, epsilon)
+                entropy_bonus = entropy_bonus_coef * entropy.mean()
                 actor_loss = actor_loss - entropy_bonus
 
-                critic_loss = self.critic_loss_fn(returns, values)
+                critic_loss = critic_loss_fn(returns, values)
 
                 # Optimizer zero grad
-                self.actor_optimizer.zero_grad()
-                self.critic_optimizer.zero_grad()
+                actor_optimizer.zero_grad()
+                critic_optimizer.zero_grad()
 
                 # Backpropagate loss
                 actor_loss.backward()
                 critic_loss.backward()
 
                 # Optimizer step
-                self.actor_optimizer.step()
-                self.critic_optimizer.step()
+                actor_optimizer.step()
+                critic_optimizer.step()
 
             # TODO: Testing loop goes here
 
@@ -122,8 +115,6 @@ class PPOAgent:
         """
         TODO: description
         """
-        assert test_env.observation_space == self.env.observation_space  # TODO: should I check it?
-        assert test_env.action_space == self.env.action_space
 
         self.actor.eval()
 
@@ -150,12 +141,9 @@ class PPOAgent:
         """
         Save policy network's state dict (learned parameters) under given model_name.
 
-        Note: Function saves only actor's parameters. Critic's wages are not saved as they are not
-        needed for making predictions.
-
         Warning: If there exists another file at the same path, it will be overwritten.
 
-        :param model_name: Model parameters will be saved to the model/model_name.pth path.
+        :param model_name: Model parameters will be saved to the model/model_name path.
         """
         folder_path = Path("models")
         model_name = Path(model_name)
@@ -168,7 +156,7 @@ class PPOAgent:
         """
         Load's policy network's parameters from a saved model dictionary.
 
-        :param model_name: Policy network's parameters will be loaded from path "models/model_name.pth".
+        :param model_name: Policy network's parameters will be loaded from path "models/model_name".
         """
         model_load_path = Path("models") / Path(model_name)
         self.actor.load_state_dict(torch.load(f=model_load_path, weights_only=True))
