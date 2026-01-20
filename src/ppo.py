@@ -110,6 +110,7 @@ class PPOAgent:
                 critic_optimizer.step()
 
             # TODO: Testing loop goes here
+            buffer.clear()
 
     def test(self, test_env: CartPoleEnv, display_episodes: int) -> list:
         """
