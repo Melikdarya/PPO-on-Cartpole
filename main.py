@@ -20,7 +20,7 @@ epsilon = 0.2  # clipping
 
 train_env = CartPoleEnv(device)
 
-if len(sys.argv) > 1 and sys.argv[1] != "evaluate":
+if len(sys.argv) <= 1 or sys.argv[1] != "evaluate":
     # ----------> train <----------
 
     CartPoleAgent = PPOAgent(train_env.observation_space, train_env.action_space, device)
@@ -42,6 +42,6 @@ newAgent.load_model_from_dict("myCartPoleAgent.pth")
 # ----------> test <----------
 
 test_episodes = 5
-test_env = CartPoleEnv(device) #test_env = CartPoleEnv(device, "human")
+test_env = CartPoleEnv(device, "human")
 rewards = newAgent.test(test_env, test_episodes)
 print(rewards)

@@ -3,6 +3,10 @@ import torch.nn as nn
 from torch.distributions import Categorical
 from tqdm import tqdm
 from pathlib import Path
+import csv
+import json
+import os
+from datetime import datetime
 
 from src.env import CartPoleEnv
 from src.models import Actor, Critic
@@ -39,7 +43,7 @@ class PPOAgent:
         )
         return -torch.mean(loss)  # empirical average, negative for gradient ascent
 
-    def _evaluate_actions(self, states: torch.Tensor, actions: torch.Tensor) -> (torch.Tensor, torch.Tensor):
+    def _evaluate_actions(self, states: torch.Tensor, actions: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
         """
         Calculate new logprobs for collected states and taken actions, and policy entropy.
         """
@@ -112,9 +116,18 @@ class PPOAgent:
             # TODO: Testing loop goes here
             buffer.clear()
 
-    def test(self, test_env: CartPoleEnv, test_episodes: int) -> list:
+    def test(self,
+             test_env: CartPoleEnv,
+             test_episodes: int,
+             csv_path: str | None = None,
+             success_threshold: float | None = None,
+             model_name: str | None = None) -> dict:
         """
-        TODO: description
+        Run evaluation episodes and optionally save results to CSV.
+
+        Returns a dict with keys: `rewards` (list), `mean`, `std`, `success_rate` (or None).
+        If `csv_path` is provided the results will be appended to that CSV file. The CSV
+        will include a header if the file does not exist.
         """
 
         self.actor.eval()
@@ -136,7 +149,44 @@ class PPOAgent:
 
             total_rewards.append(total_reward)
 
-        return total_rewards
+        # compute aggregate metrics
+        rewards_tensor = torch.tensor(total_rewards, dtype=torch.float32)
+        mean = float(rewards_tensor.mean().item())
+        std = float(rewards_tensor.std().item())
+        success_rate = None
+        if success_threshold is not None:
+            success_rate = float((rewards_tensor >= float(success_threshold)).sum().item() / len(rewards_tensor))
+
+        results = {
+            "timestamp": datetime.now().isoformat(),
+            "model": model_name or "",
+            "device": str(self.device),
+            "episodes": int(test_episodes),
+            "mean": mean,
+            "std": std,
+            "success_threshold": success_threshold if success_threshold is not None else "",
+            "success_rate": success_rate if success_rate is not None else "",
+            "rewards": total_rewards,
+        }
+
+        # Optionally write to CSV
+        if csv_path is not None:
+            # ensure directory exists
+            dir_name = os.path.dirname(csv_path)
+            if dir_name:
+                os.makedirs(dir_name, exist_ok=True)
+
+            write_header = not os.path.exists(csv_path)
+            with open(csv_path, "a", newline="") as csvfile:
+                writer = csv.DictWriter(csvfile, fieldnames=["timestamp", "model", "device", "episodes", "mean", "std", "success_threshold", "success_rate", "rewards"])
+                if write_header:
+                    writer.writeheader()
+                # serialize rewards as JSON string
+                row = results.copy()
+                row["rewards"] = json.dumps(row["rewards"])
+                writer.writerow(row)
+
+        return results
 
     def save_model_parameters(self, model_name: str) -> None:
         """
