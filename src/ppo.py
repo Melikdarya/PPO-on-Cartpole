@@ -116,6 +116,13 @@ class PPOAgent:
             # TODO: Testing loop goes here
             buffer.clear()
 
+    def get_action(self, state: torch.Tensor):
+        with torch.inference_mode():
+            action_logits = self.actor(state)
+        action_probs = torch.softmax(action_logits, dim=-1)
+        action = torch.argmax(action_probs, dim=-1)
+        return action.item()
+
     def test(self,
              test_env: CartPoleEnv,
              test_episodes: int,
