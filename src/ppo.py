@@ -113,7 +113,6 @@ class PPOAgent:
                 actor_optimizer.step()
                 critic_optimizer.step()
 
-            # TODO: Testing loop goes here
             buffer.clear()
 
     def get_action(self, state: torch.Tensor):
