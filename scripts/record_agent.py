@@ -61,5 +61,5 @@ def record_random_behavior(num_episodes=1, folder_path="recordings", name_prefix
 if __name__ == '__main__':
     # Agent = PPOAgent(4, 2, device)
     # Agent.load_model_from_dict("../models/Agent_0.pth")
-    # record_episodes(Agent, 3, "../recordings", name_prefix="Agent_0-")
-    record_random_behavior(2, "../recordings")
+    # record_episodes(Agent, 3, "../recordings", name_prefix="Agent_0")
+    record_random_behavior(5, "../recordings", "random")

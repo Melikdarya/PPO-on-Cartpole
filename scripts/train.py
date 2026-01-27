@@ -11,7 +11,7 @@ if __name__ == "__main__":
     critic_learning_rate = 0.001
     num_epochs = 100
     minibatch_size = 64
-    steps_per_rollout = 250
+    steps_per_rollout = 100
     discount_factor = 0.99  # gamma
     gae_lambda = 0.95
     entropy_bonus_coef = 0.01
@@ -23,5 +23,5 @@ if __name__ == "__main__":
     CartPoleAgent.train(train_env, actor_learning_rate, critic_learning_rate, num_epochs, minibatch_size,
                         steps_per_rollout, entropy_bonus_coef, discount_factor, gae_lambda, epsilon)
 
-    CartPoleAgent.save_model_parameters("../models/Agent_0.pth")
+    CartPoleAgent.save_model_parameters("models/Agent_1.pth")
 
