@@ -1,5 +1,12 @@
 # PPO-on-Cartpole
 
+## TODO
+- [ ] Better README.md
+- [ ] final report
+- [ ] slides
+- [ ] validation in training loop for e.g. each 10th epoch
+- [ ] is requirements.txt complete?
+
 ## Project Structure
 ```
 PPO-on-CartPole/
