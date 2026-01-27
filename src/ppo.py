@@ -188,30 +188,26 @@ class PPOAgent:
 
         return results
 
-    def save_model_parameters(self, model_name: str) -> None:
+    def save_model_parameters(self, path: str) -> None:
         """
         Save policy network's state dict (learned parameters) under given model_name.
 
         Warning: If there exists another file at the same path, it will be overwritten.
 
-        :param model_name: Model parameters will be saved to the model/model_name path.
+        :param path: Model parameters will be saved to this path.
         """
-        folder_path = Path("models")
-        if not folder_path.exists():
-            folder_path.mkdir()
-        model_name = Path(model_name)
+        model_save_path = Path(path)
 
-        model_save_path = folder_path / model_name
         print(f"Saving model to: {model_save_path}")
         torch.save(self.actor.state_dict(), model_save_path)
 
-    def load_model_from_dict(self, model_name: str) -> None:
+    def load_model_from_dict(self, path: str) -> None:
         """
         Load's policy network's parameters from a saved model dictionary.
 
-        :param model_name: Policy network's parameters will be loaded from path "models/model_name".
+        :param path: Policy network's parameters will be loaded from this path.
         """
-        model_load_path = Path("models") / Path(model_name)
+        model_load_path = Path(path)
         self.actor.load_state_dict(torch.load(f=model_load_path, weights_only=True))
         print("All keys matched successfully!")
 
