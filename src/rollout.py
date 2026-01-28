@@ -147,6 +147,8 @@ def collect_rollout(env, actor, critic, buffer, steps_per_rollout, gamma=0.99, g
     actor.eval()
     critic.eval()
 
+    to_return = None
+
     for step in range(steps_per_rollout):
 
         with torch.no_grad():
@@ -177,6 +179,8 @@ def collect_rollout(env, actor, critic, buffer, steps_per_rollout, gamma=0.99, g
 
         state = next_state
         if done:
+            if not to_return:
+                to_return = step
             state = env.reset()
 
     # Bootstrap Value for GAE
@@ -184,3 +188,6 @@ def collect_rollout(env, actor, critic, buffer, steps_per_rollout, gamma=0.99, g
         next_value = critic(state.unsqueeze(0))
 
     buffer.compute_gae(next_value.item(), gamma, gae_lambda)
+    if not to_return:
+        to_return = steps_per_rollout
+    return to_return
