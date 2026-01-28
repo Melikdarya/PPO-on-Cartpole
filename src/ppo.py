@@ -15,8 +15,21 @@ from src.rollout import RolloutBuffer, collect_rollout
 
 class PPOAgent:
     """
-    TODO: class description
+    Proximal Policy Optimization (PPO) agent implementing an actor–critic
+    architecture for discrete action spaces.
+
+    This class encapsulates the full PPO training and evaluation pipeline,
+    including rollout collection, Generalized Advantage Estimation (GAE),
+    and optimization using the clipped surrogate objective. The agent
+    maintains a policy network (actor) to select actions and a value
+    network (critic) to estimate state values. Training is performed using
+    mini-batch gradient updates with an entropy bonus to encourage
+    exploration.
+
+    The agent supports training, evaluation, model checkpointing, and
+    reproducible experimentation through configurable hyperparameters.
     """
+
     def __init__(self,
                  env_observaiotn_space_size: int,
                  env_action_space_size: int,
