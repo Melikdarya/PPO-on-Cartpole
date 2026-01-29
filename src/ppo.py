@@ -93,10 +93,12 @@ class PPOAgent:
         critic_optimizer = torch.optim.Adam(critic.parameters(), lr=critic_learning_rate)
         critic_loss_fn = nn.MSELoss()
 
+        epoch_reward = []
+
         for epoch in tqdm(range(epochs), desc="Training Progress", unit="epoch"):
 
             # collect rollout data
-            collect_rollout(env, self.actor, critic, buffer, steps_per_rollout, gamma, gae_lambda)
+            epoch_reward.append(collect_rollout(env, self.actor, critic, buffer, steps_per_rollout, gamma, gae_lambda))
 
             self.actor.train()
             critic.train()
@@ -127,6 +129,7 @@ class PPOAgent:
                 critic_optimizer.step()
 
             buffer.clear()
+        return epoch_reward
 
     def get_action(self, state: torch.Tensor):
         with torch.inference_mode():
