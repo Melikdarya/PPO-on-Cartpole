@@ -1,31 +1,64 @@
 # PPO-on-Cartpole
 
+### Authors:
+- Melika Daryaei
+- Weronika Jamróz
+- Bartosz Peczyński
+
+## Overview
+This repository containt the implementation of Proximal Policy Optimization on CartPole environment. 
+The project focuses on training an agent with PPO using actor-critic architecture, evaluate performance and stability on CartPole. 
+
+## Installation & Setup
+To get started with this project, follow these steps:
+
+1. Clone the repository
+```shell
+git clone https://github.com/Melikdarya/PPO-on-Cartpole.git
+cd PPO-on-Cartpole
+```
+2. Set up a virtual environment
+```shell
+python -m venv venv
+source venv/bin/activate
+```
+3. Install dependencies
+```shell
+pip install -r requirements.txt
+```
+
+## Usage
+1. Train the Agent
+Set up desired hyperparameters and run training script:
+```shell
+python3 -m scripts.train
+```
+2. Check out results
+```shell
+python3 main.py
+```
+
 ## Project Structure
 ```
 PPO-on-CartPole/
 │
-├── env.py                # Environment wrapper (CartPoleEnv)
-├── models.py             # Actor and Critic neural networks
-├── rollout.py            # RolloutBuffer, GAE, rollout collection
+├── README.md           <- The top-level README for developers using this project.
 │
-├── sanity_check.py       # Sanity tests for rollout + buffer
+├── requirements.txt    <- The requirements file for reproducing the analysis environment, e.g.
+│                         generated with `pip freeze > requirements.txt`
 │
-├── train.py              # (TO DO) PPO training loop
-├── evaluate.py           # (TO DO) Policy evaluation & rendering
+├── main.py             <- Code to visualise the results and run model inference with trained models 
 │
-├── requirements.txt      # Dependencies
-├── README.md             # Project documentation
-```
+├── src
+│   ├── env             <- Environment wrapper.
+│   ├── models          <- Actor and Critic neural networks.
+│   ├── rollout         <- RolloutBuffer, GAE, rollout collection.
+│   ├── sanity check    <- Sanity tests for rollout + buffer.
+│   └── ppo             <- PPO training loop + Agent class
+│
+└──  scripts
+    ├── train           <- Train and save policy.
+    ├── evaluation      <- Fine-tuning.
+    └── record          <- Make videos of trained agent in action.
 
-## How the Components Work Together
-```
-env.py
-↓
-rollout.py  ←  models.py (Actor & Critic)
-↓
-RolloutBuffer + GAE
-↓
-train.py (PPO update)
-↓
-evaluate.py
 ```
